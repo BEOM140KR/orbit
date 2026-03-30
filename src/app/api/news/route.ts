@@ -51,7 +51,14 @@ export async function GET(req: NextRequest) {
       if (!res.ok) return [];
       
       const data = await res.json();
-      return (data.articles || []).map((art: any) => ({
+      return (data.articles || []).map((art: { 
+        title: string; 
+        description: string; 
+        url: string; 
+        urlToImage: string; 
+        publishedAt: string;
+        source: { name: string };
+      }) => ({
         ...art,
         matchedKeyword: kw, 
       }));
