@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Orbit | Deep Space News Insights</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error": "#690005",
+              "on-error-container": "#ffdad6",
+              "on-secondary-container": "#00344e",
+              "surface-container-low": "#1c1b1b",
+              "inverse-on-surface": "#313030",
+              "on-primary": "#3c0091",
+              "tertiary-fixed-dim": "#ffb869",
+              "surface-bright": "#3a3939",
+              "primary": "#d0bcff",
+              "error": "#ffb4ab",
+              "on-tertiary-fixed": "#2c1700",
+              "error-container": "#93000a",
+              "on-tertiary-fixed-variant": "#673d00",
+              "on-primary-fixed": "#23005c",
+              "on-surface": "#e5e2e1",
+              "surface": "#131313",
+              "on-background": "#e5e2e1",
+              "inverse-surface": "#e5e2e1",
+              "on-tertiary": "#482900",
+              "on-secondary-fixed-variant": "#004c6e",
+              "on-surface-variant": "#cbc3d7",
+              "surface-variant": "#353534",
+              "secondary": "#89ceff",
+              "on-secondary-fixed": "#001e2f",
+              "outline-variant": "#494454",
+              "on-primary-container": "#340080",
+              "on-secondary": "#00344d",
+              "surface-container-highest": "#353534",
+              "surface-dim": "#131313",
+              "surface-container-high": "#2a2a2a",
+              "secondary-fixed-dim": "#89ceff",
+              "primary-container": "#a078ff",
+              "surface-container": "#201f1f",
+              "on-tertiary-container": "#3f2300",
+              "primary-fixed": "#e9ddff",
+              "surface-container-lowest": "#0e0e0e",
+              "outline": "#958ea0",
+              "tertiary": "#ffb869",
+              "tertiary-container": "#ca801e",
+              "primary-fixed-dim": "#d0bcff",
+              "surface-tint": "#d0bcff",
+              "on-primary-fixed-variant": "#5516be",
+              "secondary-fixed": "#c9e6ff",
+              "secondary-container": "#00a2e6",
+              "inverse-primary": "#6d3bd7",
+              "tertiary-fixed": "#ffdcbb",
+              "background": "#131313"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .mesh-gradient {
+            background-color: #0e0e0e;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.05) 0px, transparent 50%);
+        }
+        .glass-card {
+            background: rgba(42, 42, 42, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(149, 142, 160, 0.15);
+        }
+        .orbit-gradient-text {
+            background: linear-gradient(135deg, #d0bcff 0%, #89ceff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-surface-container-lowest font-body text-on-surface selection:bg-primary/30 min-h-screen mesh-gradient">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-neutral-950/40 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 h-16 shadow-[0_20px_40px_rgba(139,92,246,0.08)]">
+<div class="flex items-center gap-8">
+<h1 class="text-2xl font-bold font-headline tracking-tight bg-gradient-to-r from-violet-400 to-sky-400 bg-clip-text text-transparent">Orbit</h1>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-violet-400 border-b-2 border-violet-400 font-medium py-1" href="#">Feed</a>
+<a class="text-neutral-400 hover:text-sky-300 transition-colors duration-300 py-1" href="#">Discover</a>
+<a class="text-neutral-400 hover:text-sky-300 transition-colors duration-300 py-1" href="#">Saved</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-neutral-400 hover:text-sky-300 transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-neutral-400 hover:text-sky-300 transition-colors">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+</button>
+<div class="flex items-center gap-2 ml-2">
+<img alt="User profile avatar" class="w-8 h-8 rounded-full border border-white/10" data-alt="Close-up portrait of a professional man with a friendly expression in a modern, clean lighting environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2L3S1vD8Uf6Nc6YAJ2-j7Ndtpca3dXlFxv6ALQlwO3NFqvF_61lr8orYBojig1girnL2ayQ7oOb92sJmDx3cMs-YRTbeJRcqLEpLatcQg2B9x8AcI2mZEucfM8SHNyX6cQ3iebIDbPMsM8aOgSN4RUGL2vqy5ZLP7l8PrPxpP30228Lc0sVcAgLjhhTPOSttvkqbSUFjyCQyYl28GMqhDJnBsaVZbIXRlA5VdQBEgDUJJ6Do6xXYnF3XzLvXoW-RYpa2bcnS97c8"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Desktop Only) -->
+<aside class="hidden lg:flex flex-col py-8 px-4 gap-6 h-screen w-64 fixed left-0 top-0 bg-neutral-900/60 backdrop-blur-2xl z-40 mt-16">
+<div class="flex items-center gap-3 px-2">
+<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-fixed text-sm" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div>
+<p class="font-headline font-bold text-white leading-none">Orbit AI</p>
+<p class="text-neutral-500 text-[10px] uppercase tracking-wider mt-1">Deep Space Insights</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 py-3 px-3 bg-gradient-to-r from-violet-600/20 to-sky-600/20 text-violet-300 border-r-2 border-violet-500 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="memory">memory</span>
+<span class="font-medium text-sm">IT</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-3 text-neutral-500 hover:text-neutral-200 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="payments">payments</span>
+<span class="font-medium text-sm">Economy</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-3 text-neutral-500 hover:text-neutral-200 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="theater_comedy">theater_comedy</span>
+<span class="font-medium text-sm">Culture</span>
+</a>
+<a class="flex items-center gap-3 py-3 px-3 text-neutral-500 hover:text-neutral-200 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="trending_up">trending_up</span>
+<span class="font-medium text-sm">Trends</span>
+</a>
+</nav>
+<div class="mt-auto flex flex-col gap-1">
+<button class="mx-2 mb-4 py-2 px-4 rounded-full bg-gradient-to-r from-primary to-secondary text-on-primary-fixed font-bold text-xs uppercase tracking-widest shadow-lg shadow-primary/20">
+                Upgrade to Pro
+            </button>
+<a class="flex items-center gap-3 py-2 px-3 text-neutral-500 hover:text-neutral-200 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="settings">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+<a class="flex items-center gap-3 py-2 px-3 text-neutral-500 hover:text-neutral-200 hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined text-[18px]" data-icon="help">help</span>
+<span class="text-sm">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-24 lg:pl-72 px-6">
+<!-- Hero Section Asymmetry -->
+<section class="mb-12 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+<div class="max-w-2xl">
+<span class="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest mb-4">Daily Briefing</span>
+<h2 class="text-4xl md:text-5xl lg:text-6xl font-headline font-bold tracking-tighter leading-[1.1]">
+                    The universe of <span class="orbit-gradient-text">information</span>, distilled for you.
+                </h2>
+</div>
+<div class="flex gap-2 pb-2 overflow-x-auto no-scrollbar whitespace-nowrap lg:max-w-sm">
+<button class="px-5 py-2 rounded-full bg-gradient-to-r from-primary to-secondary text-on-primary font-semibold text-sm">All News</button>
+<button class="px-5 py-2 rounded-full bg-surface-container-high text-on-surface-variant text-sm hover:bg-surface-bright transition-colors">#AI</button>
+<button class="px-5 py-2 rounded-full bg-surface-container-high text-on-surface-variant text-sm hover:bg-surface-bright transition-colors">#Quantum</button>
+<button class="px-5 py-2 rounded-full bg-surface-container-high text-on-surface-variant text-sm hover:bg-surface-bright transition-colors">#Market</button>
+</div>
+</section>
+<!-- News Bento/Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Featured Card -->
+<article class="md:col-span-2 group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300">
+<div class="relative h-64 md:h-80 overflow-hidden">
+<img alt="Satellite view of Earth" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Cinematic satellite view of earth at night with glowing city lights and atmospheric blue haze in high resolution" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyIV-nE0THoVMrlAuZ_Q0CJ1s81NrL24SYpOC0uPtWVdnNtXMb9I9wLSWoFfGrsf_fPUhNsaqfkXhUm__4MfbWOpdDwv4GCYwfPo0zTaekAHSMjlbbaCIfzzUbzjGapyh6lWXpnp0gecWP08nxksQ9doa1sFEe0FW8H9qjr0fbwips3Dtvnn_75FMJrJAgRAESotOM8VU3mG8RZwiqLNi4M4lTUYk46THIQkgjc7aSpcDzkpxvTJjrDxhyhaoiG1oAxyFCR335d-Y"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-transparent to-transparent opacity-80"></div>
+<div class="absolute top-4 left-4">
+<span class="flex items-center gap-1.5 px-3 py-1 rounded-lg glass-card bg-neutral-900/40 backdrop-blur-md text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-[14px]" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            AI SUMMARY
+                        </span>
+</div>
+</div>
+<div class="p-6">
+<div class="flex items-center gap-4 mb-3">
+<span class="text-xs font-mono text-primary uppercase tracking-widest">Technological Frontiers</span>
+<span class="text-[10px] text-neutral-500">• 4 MIN READ</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-white mb-3 leading-tight group-hover:text-primary transition-colors">Orbital Computing: Why Silicon Valley is Looking at the Stars for the Next Cloud Cluster</h3>
+<p class="text-on-surface-variant line-clamp-2 mb-4 text-sm leading-relaxed">As terrestrial data centers hit thermal limits, the vacuum of space offers a radical new environment for massive-scale neural network training.</p>
+</div>
+</article>
+<!-- Regular Grid Card 1 -->
+<article class="group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300">
+<div class="relative h-48 overflow-hidden">
+<img alt="AI abstract visual" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Abstract visualization of neural networks with glowing purple and cyan nodes against a deep black background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsVN6PrMdOvbb0ObuoSAxduTQ5l1Tc_5AN1EFcm1SwXgoIW5a86jQBFntJio4P3TN55Uzg0kQTEAaCiqf23woKkcHntnr1nrvVbJPlXwhTV08CObpTcWyUNsTOxoNpf6HTslzsa7C9JPLmfzpo00q2i5VmBAWV1gWM7VY_CD4DDTTWgNtDQtz8T6UqXvVNZ347wSgYwbjJnfm0wtdOwMYtGYrKjSfuXjMcri9AF6Gf5F41UTNG_h5zxqtxRZs09TguAH2uJZmHBgs"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/60 to-transparent"></div>
+<div class="absolute top-4 left-4">
+<span class="flex items-center gap-1.5 px-2 py-1 rounded-lg glass-card bg-neutral-900/40 backdrop-blur-md text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            AI SUMMARY
+                        </span>
+</div>
+</div>
+<div class="p-5">
+<span class="text-[10px] font-mono text-secondary uppercase tracking-widest mb-2 block">Trends</span>
+<h3 class="text-lg font-headline font-bold text-white mb-2 leading-snug group-hover:text-secondary transition-colors">Generative Video: The New Content Standard</h3>
+<p class="text-on-surface-variant text-xs line-clamp-3 leading-relaxed">Synthetically generated cinema is moving from uncanny valley to mainstream production within 12 months.</p>
+</div>
+</article>
+<!-- Regular Grid Card 2 -->
+<article class="group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300">
+<div class="relative h-48 overflow-hidden">
+<img alt="Cryptocurrency visual" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Close-up of holographic blockchain data visual flowing across a dark reflective surface with teal and blue lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArA6l2a9-cvyFXVaMAK20NtSogmcz5u53jq4Xc0VQatvZiL16f_o9UPyh6UjNRaccCA2hU1HqCp4p7Hf2a05iuNdr1dwA3bPdZliiFtIYQ2PqlYxkFN4Rk72yK7NPKSzac6hKu_3l0NHmCtf94WMiDu8DfIWtuyZQGIIe8FUOi1s9gAlcLZxF-jrWzNCdHUXtnE9a914CLJ989hGxzQVYuEW1JqG8efdWC1aZq3nvj1kyUAT1tMow1zkK8n3Ao-2IiPu3P21jXOa8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/60 to-transparent"></div>
+<div class="absolute top-4 left-4">
+<span class="flex items-center gap-1.5 px-2 py-1 rounded-lg glass-card bg-neutral-900/40 backdrop-blur-md text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            AI SUMMARY
+                        </span>
+</div>
+</div>
+<div class="p-5">
+<span class="text-[10px] font-mono text-secondary uppercase tracking-widest mb-2 block">Economy</span>
+<h3 class="text-lg font-headline font-bold text-white mb-2 leading-snug group-hover:text-secondary transition-colors">Post-Fiat: The Algorithmic Central Banks</h3>
+<p class="text-on-surface-variant text-xs line-clamp-3 leading-relaxed">How protocol-governed liquidity is reshaping national debt structures in emerging markets.</p>
+</div>
+</article>
+<!-- Regular Grid Card 3 -->
+<article class="group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300">
+<div class="relative h-48 overflow-hidden">
+<img alt="Retro future computer" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="High-tech glowing server racks in a darkened room with soft violet ambient light reflecting off metallic surfaces" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJZSX-mCoI44US39iGF5Vw_K5wZFQVi4Fp8X_WEPVrom8GbeANXyQdm8Q4y0H0l6qrX8IbMdiKoWPrW-KM5Z7kROvxp1T8fPb8Hzona33srrXl8VY20CD2GC7D2VPZ-Lqcp2M87wk_qLP0z_lhIoVMEq0GXAXdiWx0a3gFisdy3NlSaR0BadTmeKnA58RxEi5uQf0azyNGqOxWOrW8kywRmBpNPZ2NxXGuNKQrGFN-W0pJMA9doV8daulcPt90YVG7hV7fRud3owE"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/60 to-transparent"></div>
+<div class="absolute top-4 left-4">
+<span class="flex items-center gap-1.5 px-2 py-1 rounded-lg glass-card bg-neutral-900/40 backdrop-blur-md text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            AI SUMMARY
+                        </span>
+</div>
+</div>
+<div class="p-5">
+<span class="text-[10px] font-mono text-secondary uppercase tracking-widest mb-2 block">IT</span>
+<h3 class="text-lg font-headline font-bold text-white mb-2 leading-snug group-hover:text-secondary transition-colors">Quantum Supremacy in Healthcare</h3>
+<p class="text-on-surface-variant text-xs line-clamp-3 leading-relaxed">Real-time protein folding simulations are cutting drug discovery timelines from years to hours.</p>
+</div>
+</article>
+<!-- Regular Grid Card 4 -->
+<article class="group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300">
+<div class="relative h-48 overflow-hidden">
+<img alt="Modern architecture" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="Low angle view of futuristic glass skyscraper with clean geometric lines and deep blue sky reflecting on the facade" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVeSanZ6T6BqT-vuJbEj36IPaRzHRmKCzCqgvLJ_ySEtiC1Wqk0J_fJuilhENbRDWpk1LmAxS3G7mPgFK4gqC06el84rT-eHryevvhGg5R4_UcPPnvPLKEEWgUJNpQA9_L49jja4K3KT8fh7GO0hYVo13T6MhV42I7_xK8w1of4pcfJQrOfn3rQzKtrZJ7QKtZ6e1DJRHCNfd0R9TW7pnFfbKT7446Ws97YqyEqRqh58mPdbGr0lF4FtI45zVzSogA0ttH0PrjTWc"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/60 to-transparent"></div>
+<div class="absolute top-4 left-4">
+<span class="flex items-center gap-1.5 px-2 py-1 rounded-lg glass-card bg-neutral-900/40 backdrop-blur-md text-primary text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px]" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            AI SUMMARY
+                        </span>
+</div>
+</div>
+<div class="p-5">
+<span class="text-[10px] font-mono text-secondary uppercase tracking-widest mb-2 block">Culture</span>
+<h3 class="text-lg font-headline font-bold text-white mb-2 leading-snug group-hover:text-secondary transition-colors">Cyber-Cities: The Urban Renaissance</h3>
+<p class="text-on-surface-variant text-xs line-clamp-3 leading-relaxed">The architecture of hyper-density is prioritizing green spaces and modular living units.</p>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex md:hidden justify-around items-center h-20 px-4 pb-safe bg-neutral-950/80 backdrop-blur-lg border-t border-white/5 rounded-t-2xl shadow-2xl shadow-violet-500/20">
+<a class="flex flex-col items-center justify-center text-violet-400 bg-violet-500/10 rounded-xl px-3 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="rss_feed">rss_feed</span>
+<span class="font-inter text-[10px] uppercase tracking-widest mt-1">Feed</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-500 hover:text-white" href="#">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-inter text-[10px] uppercase tracking-widest mt-1">Discover</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-500 hover:text-white" href="#">
+<span class="material-symbols-outlined" data-icon="bookmark">bookmark</span>
+<span class="font-inter text-[10px] uppercase tracking-widest mt-1">Saved</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-500 hover:text-white" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-inter text-[10px] uppercase tracking-widest mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

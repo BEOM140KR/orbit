@@ -21,7 +21,6 @@ export default function OrbitNewsCurator() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [dataLoading, setDataLoading] = useState(false);
-  
   const [articles, setArticles] = useState<Article[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
 
@@ -30,20 +29,29 @@ export default function OrbitNewsCurator() {
   const [summary, setSummary] = useState<string | null>(null);
   const [isSummarizing, setIsSummarizing] = useState(false);
 
-  // 공통 Fetch 로직
+  // Feature States
+  const [bookmarks, setBookmarks] = useState<string[]>([]); // URLs only for quick check
+  const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [view, setView] = useState<'feed' | 'bookmarks'>('feed');
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // Data fetching
   const fetchNews = useCallback(async () => {
     if (!user) return;
     setNewsLoading(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch('/api/news', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch('/api/news', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setArticles(data.articles || []);
       }
-    } catch (e) { console.error('Error news:', e); } 
+    } catch (e) { console.error('Error fetching news:', e); } 
     finally { setNewsLoading(false); }
   }, [user]);
 
@@ -52,19 +60,36 @@ export default function OrbitNewsCurator() {
     setDataLoading(true);
     try {
       const token = await user.getIdToken();
-      const res = await fetch('/api/keywords', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch('/api/keywords', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
         setKeywords(data.keywords || []);
         fetchNews();
       }
-    } catch (e) { console.error('Error kw:', e); } 
+    } catch (e) { console.error('Error fetching keywords:', e); } 
     finally { setDataLoading(false); }
   }, [user, fetchNews]);
 
-  useEffect(() => { fetchKeywords(); }, [fetchKeywords]);
+  const fetchBookmarks = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/bookmarks', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setBookmarks(data.bookmarks.map((b: any) => b.url));
+        setBookmarkedArticles(data.bookmarks.map((b: any) => ({
+          ...b,
+          source: { name: b.sourceName || 'Unknown' }
+        })));
+      }
+    } catch (e) { console.error('Error fetching bookmarks:', e); }
+  }, [user]);
+
+  useEffect(() => { 
+    fetchKeywords(); 
+    fetchBookmarks();
+  }, [fetchKeywords, fetchBookmarks]);
 
   const saveKeywordsToDB = async (updatedKeywords: string[]) => {
     if (!user) return;
@@ -72,14 +97,11 @@ export default function OrbitNewsCurator() {
       const token = await user.getIdToken();
       await fetch('/api/keywords', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ keywords: updatedKeywords }),
       });
       fetchNews(); 
-    } catch (e) { console.error('Error save:', e); }
+    } catch (e) { console.error('Error saving keywords:', e); }
   };
 
   const handleAddKeyword = () => {
@@ -97,14 +119,57 @@ export default function OrbitNewsCurator() {
     saveKeywordsToDB(newArray);
   };
 
+  const handleToggleBookmark = async (article: Article) => {
+    if (!user) return;
+    const isBookmarked = bookmarks.includes(article.url);
+    const method = isBookmarked ? 'DELETE' : 'POST';
+    const body = isBookmarked 
+      ? { url: article.url } 
+      : { ...article, sourceName: article.source?.name || '' };
+
+    // Optimistic UI update
+    if (isBookmarked) {
+      setBookmarks(prev => prev.filter(url => url !== article.url));
+      setBookmarkedArticles(prev => prev.filter(a => a.url !== article.url));
+    } else {
+      setBookmarks(prev => [...prev, article.url]);
+      setBookmarkedArticles(prev => [article, ...prev]);
+    }
+
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/bookmarks', {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) showToast(isBookmarked ? '북마크가 해제되었습니다.' : '북마크에 추가되었습니다.');
+      else fetchBookmarks(); // Revert on failure
+    } catch (error) { fetchBookmarks(); }
+  };
+
+  const handleShare = async (article: Article) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: article.title,
+          text: article.description,
+          url: article.url,
+        });
+      } catch (err) { console.error('Share failed', err); }
+    } else {
+      await navigator.clipboard.writeText(article.url);
+      showToast('🔗 링크가 복사되었습니다!');
+    }
+  };
+
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
   };
 
-  // 모달(상세보기) 핸들러
   const handleCardClick = async (e: React.MouseEvent, article: Article) => {
-    e.preventDefault(); // 기본 링크 이동 방어
+    e.preventDefault();
     setSelectedArticle(article);
     setSummary(null);
     setIsSummarizing(true);
@@ -113,10 +178,7 @@ export default function OrbitNewsCurator() {
       const token = await user?.getIdToken();
       const res = await fetch('/api/summary', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ url: article.url })
       });
       if (res.ok) {
@@ -134,192 +196,278 @@ export default function OrbitNewsCurator() {
 
   const closeModal = () => setSelectedArticle(null);
 
-  if (authLoading) return <div className="loadingContainer">Auth Sync...</div>;
+  if (authLoading) return <div className="flex justify-center items-center h-screen bg-black text-on-surface">Auth Sync...</div>;
 
   if (!user) {
     return (
-      <main className="guestContainer">
-        <div className="heroCard">
-          <h1 className="title">Orbit MVP</h1>
-          <p className="subtitle">AI Curated News & Translation Dashboard.</p>
-          <button onClick={handleLogin} className="loginButton">Sign In with Google</button>
+      <main className="flex flex-col items-center justify-center min-h-screen">
+        <div className="glass-card p-12 rounded-3xl text-center max-w-lg shadow-2xl">
+          <h1 className="text-4xl lg:text-5xl font-bold font-headline mb-4">
+             <span className="orbit-gradient-text">Orbit</span>
+          </h1>
+          <p className="text-on-surface-variant font-medium mb-8 leading-relaxed">
+            The universe of information, distilled for you. AI Curated News & Translation Dashboard.
+          </p>
+          <button onClick={handleLogin} className="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-gradient-to-r from-primary to-secondary text-on-primary-fixed font-bold text-shadow transition-transform hover:scale-[1.03] active:scale-95 shadow-lg shadow-primary/20">
+             <span className="material-symbols-outlined text-[20px]">login</span> Sign In with Google
+          </button>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="dashboardContainer">
-      <header className="header">
-        <h2>Orbit Dashboard</h2>
-        <div className="userConfig">
-          <span className="userEmail">{user.email}</span>
-          <button onClick={() => signOut(auth)} className="logoutButton">Log out</button>
+    <>
+      {/* Top Navbar */}
+      <header className="fixed top-0 w-full z-40 bg-neutral-950/40 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 h-16 shadow-[0_20px_40px_rgba(139,92,246,0.08)]">
+        <div className="flex items-center gap-8">
+          <h1 className="text-2xl font-bold font-headline tracking-tight orbit-gradient-text cursor-pointer" onClick={() => setView('feed')}>Orbit</h1>
+          <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full bg-white/5 border border-white/10">
+            <button 
+              onClick={() => setView('feed')}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${view === 'feed' ? 'bg-primary text-white' : 'text-neutral-400 hover:text-white'}`}>
+              Feed
+            </button>
+            <button 
+              onClick={() => setView('bookmarks')}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${view === 'bookmarks' ? 'bg-primary text-white' : 'text-neutral-400 hover:text-white'}`}>
+              Saved
+            </button>
+          </nav>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="hidden md:inline-block text-on-surface-variant text-sm border border-outline-variant px-3 py-1 rounded-full">{user.email}</span>
+          <button onClick={() => signOut(auth)} className="text-neutral-400 hover:text-sky-300 transition-colors flex items-center justify-center" aria-label="Log Out">
+            <span className="material-symbols-outlined" data-icon="logout">logout</span>
+          </button>
         </div>
       </header>
 
-      {/* 키워드 영역 */}
-      <section className="keywordSection">
-        <h3>My Target Topics</h3>
-        <div className="inputGroup">
-          <input 
-            value={newKeyword} 
-            onChange={(e) => setNewKeyword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
-            placeholder="예: 클라우드, 해외주식" 
-            className="keywordInput"
-          />
-          <button onClick={handleAddKeyword} className="addButton">추가</button>
-        </div>
-        
-        {dataLoading ? (
-           <p className="loadingText">연동 정보를 확인중...</p>
-        ) : (
-          <div className="chipContainer">
-            {keywords.length === 0 && <span className="emptyText">등록된 키워드가 없습니다. 기본(IT, 경제, 문화) 피드가 로드됩니다.</span>}
-            {keywords.map((kw) => (
-              <span key={kw} onClick={() => handleRemoveKeyword(kw)} className="chip">
-                  {kw} <span className="closeIcon">✕</span>
-              </span>
-            ))}
+      <main className="pt-24 pb-24 px-6 max-w-6xl mx-auto min-h-screen">
+        <section className="mb-12 flex flex-col justify-between gap-6">
+          <div className="max-w-2xl">
+            <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest mb-4">
+              {view === 'feed' ? 'Daily Briefing' : 'Personal Archive'}
+            </span>
+            <h2 className="text-4xl md:text-5xl font-headline font-bold tracking-tighter leading-[1.1] text-white">
+                {view === 'feed' ? (
+                  <>Live <span className="orbit-gradient-text">feed</span> pipeline</>
+                ) : (
+                  <>Saved <span className="orbit-gradient-text">bookmarks</span></>
+                )}
+            </h2>
           </div>
-        )}
-      </section>
 
-      {/* 뉴스 피드 */}
-      <section className="feedSection">
-        <div className="feedHeader">
-           <h3>Live Pipeline</h3>
-           <button onClick={fetchNews} className="refreshButton">🔄 갱신</button>
-        </div>
-        
-        {newsLoading ? (
-          <div className="spinner">빅데이터를 긁어오고 알고리즘을 최적화하는 중입니다...</div>
-        ) : articles.length > 0 ? (
-          <div className="newsGrid">
-             {articles.map((article, index) => (
-               <a 
-                 key={index} 
-                 href={article.url} 
-                 onClick={(e) => handleCardClick(e, article)} 
-                 className="newsCard"
-               >
-                 {article.urlToImage && (
-                   <div className="imageWrapper">
-                      <img src={article.urlToImage} alt={article.title} />
-                   </div>
-                 )}
-                 <div className="cardContent">
-                    <span className="badge">{article.matchedKeyword}</span>
-                    <h4 className="cardTitle">{article.title}</h4>
-                    <p className="cardDesc">{article.description?.slice(0, 100)}...</p>
-                    <div className="cardFooter">
-                       <span className="source">{article.source.name}</span>
-                       <span className="date">{new Date(article.publishedAt).toLocaleDateString()}</span>
-                    </div>
-                 </div>
-               </a>
-             ))}
-          </div>
-        ) : (
-          <p className="emptyNews">뉴스 소스를 찾고 있습니다. 잠시 후 다시 갱신해주세요.</p>
-        )}
-      </section>
-
-      {/* 모달(상세보기 & AI 요약) */}
-      {selectedArticle && (
-        <div className="modalOverlay" onClick={closeModal}>
-          <div className="modalContent" onClick={(e) => e.stopPropagation()}>
-            <button className="modalCloseBtn" onClick={closeModal}>✕</button>
-            <div className="modalHeader">
-              {selectedArticle.urlToImage && <img src={selectedArticle.urlToImage} alt="news cover" className="modalImg" />}
-              <h2 className="modalTitle">{selectedArticle.title}</h2>
+          {view === 'feed' && (
+            <div className="flex flex-col sm:flex-row gap-4 mt-4 glass-card p-4 rounded-xl max-w-3xl">
+              <div className="flex w-full sm:w-auto flex-1 h-10 border border-outline-variant rounded-full bg-surface-container-lowest overflow-hidden focus-within:border-primary transition-colors">
+                <input 
+                  value={newKeyword} 
+                  onChange={(e) => setNewKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
+                  placeholder="관심 키워드 추가 (예: 클라우드, 주식)" 
+                  className="flex-1 bg-transparent px-4 text-sm outline-none text-on-surface placeholder:text-neutral-600"
+                />
+                <button onClick={handleAddKeyword} className="bg-surface-bright hover:bg-white/10 px-4 text-sm font-semibold text-on-surface transition border-l border-outline-variant">추가</button>
+              </div>
+              
+              <div className="flex gap-2 pb-2 sm:pb-0 overflow-x-auto no-scrollbar items-center whitespace-nowrap">
+                <button onClick={fetchNews} className="flex shrink-0 items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-primary to-secondary text-on-primary font-bold hover:scale-105 transition">
+                  <span className="material-symbols-outlined text-[20px]">refresh</span>
+                </button>
+                {dataLoading && <span className="text-sm text-neutral-500 px-2 align-middle max-h-5 object-contain">연동 정보 갱신 중...</span>}
+                {!dataLoading && keywords.length === 0 && <span className="text-sm text-neutral-500 px-2">기본 피드가 적용중입니다.</span>}
+                {!dataLoading && keywords.map(kw => (
+                   <button key={kw} onClick={() => handleRemoveKeyword(kw)} className="group relative px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant text-sm hover:text-error hover:bg-error-container/20 border border-outline-variant transition-colors flex items-center pr-8 h-10 overflow-hidden">
+                     #{kw} 
+                     <span className="material-symbols-outlined text-[16px] absolute right-2 opacity-50 group-hover:opacity-100 transition-opacity">close</span>
+                   </button>
+                ))}
+              </div>
             </div>
-            <div className="modalBody">
-              <div className="aiBadge">✨ Gemini 2.5 Flash Lite 초고속 한글 요약 및 번역</div>
+          )}
+        </section>
+
+        {view === 'feed' ? (
+          newsLoading ? (
+              <div className="flex justify-center flex-col gap-4 items-center py-32">
+                <div className="w-10 h-10 rounded-full border-4 border-surface-bright border-t-primary animate-spin"></div>
+                <p className="text-sm font-mono text-on-surface-variant tracking-widest uppercase">Fetching Cosmos Data</p>
+              </div>
+          ) : articles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {articles.map((article, idx) => (
+                  <article key={idx} onClick={(e) => handleCardClick(e, article)} className={`group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 cursor-pointer ${idx === 0 ? 'md:col-span-2' : ''}`}>
+                    <div className={`relative ${idx === 0 ? 'h-64' : 'h-48'} overflow-hidden`}>
+                      <img alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={article.urlToImage || 'https://images.unsplash.com/photo-1550592704-5e58992e5c8e'} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-transparent to-transparent opacity-80"></div>
+                      <div className="absolute top-4 left-4">
+                          <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg glass-card bg-neutral-900/40 backdrop-blur-md text-primary text-[10px] font-bold">
+                              <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                              AI SUMMARY
+                          </span>
+                      </div>
+                    </div>
+                    <div className="p-5 md:p-6">
+                      <div className="flex items-center gap-4 mb-3">
+                         <span className="text-[10px] font-mono orbit-gradient-text uppercase tracking-widest">{article.matchedKeyword || 'NEWS'}</span>
+                         <span className="text-[10px] text-neutral-500">• {article.source.name}</span>
+                      </div>
+                      <h3 className={`font-headline font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors line-clamp-3 ${idx === 0 ? 'text-2xl' : 'text-lg'}`}>
+                         {article.title}
+                      </h3>
+                      <p className={`text-on-surface-variant line-clamp-2 leading-relaxed ${idx === 0 ? 'text-sm mb-4' : 'text-xs'}`}>
+                         {article.description}
+                      </p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+          ) : (
+              <div className="py-20 text-center glass-card rounded-2xl">
+                <span className="material-symbols-outlined text-4xl text-neutral-600 mb-4 block">snooze</span>
+                <p className="text-on-surface-variant">표시할 뉴스 데이터가 없습니다.</p>
+              </div>
+          )
+        ) : (
+          bookmarkedArticles.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {bookmarkedArticles.map((article, idx) => (
+                <article key={idx} onClick={(e) => handleCardClick(e, article)} className="group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                  <div className="relative h-48 overflow-hidden">
+                    <img alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={article.urlToImage || 'https://images.unsplash.com/photo-1550592704-5e58992e5c8e'} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-transparent to-transparent opacity-80"></div>
+                  </div>
+                  <div className="p-5">
+                    <div className="flex items-center gap-4 mb-3">
+                       <span className="text-[10px] text-neutral-500">{article.source.name}</span>
+                    </div>
+                    <h3 className="font-headline font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors line-clamp-3 text-lg">
+                       {article.title}
+                    </h3>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center glass-card rounded-2xl border border-dashed border-white/5">
+              <span className="material-symbols-outlined text-4xl text-neutral-600 mb-4 block">bookmark_border</span>
+              <p className="text-on-surface-variant">저장된 북마크가 없습니다.</p>
+              <button 
+                onClick={() => setView('feed')}
+                className="mt-6 px-6 py-2 rounded-full border border-primary/30 text-primary text-sm font-bold hover:bg-primary/10 transition-all">
+                Find News to Save
+              </button>
+            </div>
+          )
+        )}
+      </main>
+
+      {/* Detail Modal Overlay */}
+      {selectedArticle && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-surface-container-lowest/80 backdrop-blur-md transition-opacity" onClick={closeModal}>
+          <div className="glass-card w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-[0_40px_100px_rgba(139,92,246,0.15)] animate-in fade-in zoom-in duration-300" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="p-6 sm:p-8 pb-0 flex justify-between items-start">
+              <div className="flex-1 pr-4 sm:pr-8">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                  <span className="text-[10px] text-primary font-label uppercase tracking-widest font-bold">Orbit AI Analysis</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-headline font-bold text-white leading-tight">
+                  {selectedArticle.title}
+                </h2>
+              </div>
+              <button onClick={closeModal} className="p-2 rounded-full hover:bg-white/10 text-neutral-400 transition-colors group shrink-0">
+                <span className="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform duration-300">close</span>
+              </button>
+            </div>
+
+            {/* Modal Middle: AI Summary Content */}
+            <div className="p-6 sm:p-8 space-y-6 sm:space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
               {isSummarizing ? (
-                <div className="skeletonBox">
-                  <div className="skeletonLine"></div>
-                  <div className="skeletonLine"></div>
-                  <div className="skeletonLine short"></div>
+                <div className="space-y-4 animate-pulse pt-4">
+                  <div className="h-4 bg-white/10 rounded-full w-[95%]"></div>
+                  <div className="h-4 bg-white/10 rounded-full w-[90%]"></div>
+                  <div className="h-4 bg-white/10 rounded-full w-[98%]"></div>
+                  <div className="h-4 bg-white/10 rounded-full w-[85%]"></div>
+                  <div className="h-4 bg-white/10 rounded-full w-[60%]"></div>
                 </div>
               ) : (
-                <div className="summaryBox">
+                <div className="text-on-surface-variant text-base md:text-lg leading-relaxed space-y-6">
                   {summary ? (
-                    summary.split('\n').filter(s => s.trim() !== '').map((line, i) => (
-                      <p key={i} className="summaryLine">{line}</p>
-                    ))
+                    summary.split('\n').filter(s => s.trim() !== '').map((line, i) => {
+                      const isHeading = line.startsWith('[') && line.endsWith(']');
+                      return (
+                        <p key={i} className={`font-body font-normal ${isHeading ? 'text-primary font-bold mt-4' : 'text-on-surface'}`}>
+                          {line}
+                        </p>
+                      );
+                    })
                   ) : (
-                    <p>내용을 불러올 수 없습니다.</p>
+                    <p className="text-error">요약 정보를 불러올 수 없는 기사입니다.</p>
+                  )}
+
+                  {summary && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6">
+                      <div className="p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/5 flex gap-4">
+                        <span className="material-symbols-outlined text-secondary shrink-0">check_circle</span>
+                        <div>
+                          <p className="text-[10px] sm:text-xs font-bold text-neutral-300 mb-1 uppercase tracking-tighter">Fast Translation</p>
+                          <p className="text-xs sm:text-sm text-neutral-400">Gemini 2.5 Flash Lite</p>
+                        </div>
+                      </div>
+                      <div className="p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/5 flex gap-4">
+                        <span className="material-symbols-outlined text-primary shrink-0">bolt</span>
+                        <div>
+                          <p className="text-[10px] sm:text-xs font-bold text-neutral-300 mb-1 uppercase tracking-tighter">Powered By</p>
+                          <p className="text-xs sm:text-sm text-neutral-400">Orbit Intelligence</p>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
             </div>
-            <div className="modalFooter">
-              <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer" className="originalLinkBtn">
-                  📰 원문 웹사이트에서 읽기
+
+            {/* Modal Bottom: Action Bar */}
+            <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-2 flex flex-col md:flex-row items-center gap-3 sm:gap-4 border-t border-white/5 mt-4">
+              <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer" className="w-full md:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-on-primary-fixed font-bold flex items-center justify-center gap-3 shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-95 transition-all group">
+                <span>원문 읽기</span>
+                <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
               </a>
+              <div className="flex items-center gap-2 w-full md:w-auto md:ml-auto">
+                <button 
+                  onClick={() => handleToggleBookmark(selectedArticle)}
+                  className={`flex-1 md:flex-none p-3.5 sm:p-4 rounded-full transition-all flex items-center justify-center gap-2 ${
+                    bookmarks.includes(selectedArticle.url) 
+                      ? 'bg-primary/20 text-primary hover:bg-primary/30' 
+                      : 'bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
+                  }`}>
+                  <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: bookmarks.includes(selectedArticle.url) ? "'FILL' 1" : "'FILL' 0" }}>bookmark</span>
+                  <span className="md:hidden text-xs font-bold">{bookmarks.includes(selectedArticle.url) ? 'Saved' : 'Save'}</span>
+                </button>
+                <button 
+                  onClick={() => handleShare(selectedArticle)}
+                  className="flex-1 md:flex-none p-3.5 sm:p-4 rounded-full bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                  <span className="material-symbols-outlined text-xl">share</span>
+                  <span className="md:hidden text-xs font-bold">Share</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { margin: 0; padding: 0; background-color: #0d0d0d; color: #ededed; font-family: 'Inter', sans-serif; }
-        .loadingContainer, .guestContainer { display: flex; justify-content: center; align-items: center; height: 100vh; background: #000; }
-        .dashboardContainer { max-width: 1000px; margin: 0 auto; padding: 2rem; }
-        .loginButton { padding: 0.8rem 1.8rem; font-size: 1.1rem; font-weight: 500; background: #fff; color: #000; border: none; border-radius: 8px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
-        .loginButton:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,255,255,0.2); }
-        .logoutButton { padding: 0.5rem 1rem; background: transparent; border: 1px solid #444; color: #bbb; border-radius: 4px; cursor: pointer; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 1rem; margin-bottom: 2rem; }
-        .keywordSection { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 2.5rem; backdrop-filter: blur(10px); }
-        .inputGroup { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; }
-        .keywordInput { flex: 1; padding: 0.8rem; background: #1a1a1a; border: 1px solid #444; border-radius: 6px; color: #fff; font-size: 1rem; outline: none; }
-        .addButton { background: #fff; color: #000; padding: 0 1.5rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
-        .chipContainer { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-        .chip { background: #2a2a2a; color: #dedede; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; cursor: pointer; display: flex; gap: 0.4rem; }
-        .chip:hover { background: #3a3a3a; transform: translateY(-1px); }
-        .closeIcon { color: #888; } .chip:hover .closeIcon { color: #ff4d4d; }
-        .feedHeader { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #333; padding-bottom: 0.5rem; margin-bottom: 2rem; }
-        .refreshButton { background: none; border: none; color: #aaa; cursor: pointer; transition: color 0.2s; }
-        .newsGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
-        .newsCard { display: flex; flex-direction: column; background: #161616; border: 1px solid #2a2a2a; border-radius: 12px; overflow: hidden; text-decoration: none; color: inherit; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
-        .newsCard:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.5); border-color: #444; }
-        .imageWrapper { height: 160px; overflow: hidden; }
-        .imageWrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s; }
-        .newsCard:hover .imageWrapper img { transform: scale(1.05); }
-        .cardContent { padding: 1.2rem; display: flex; flex-direction: column; flex: 1; }
-        .badge { align-self: flex-start; background: #004d40; color: #80cbc4; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.8rem; }
-        .cardTitle { font-size: 1.05rem; line-height: 1.4; margin: 0 0 0.5rem 0; font-weight: 600; color: #fff; }
-        .cardDesc { font-size: 0.9rem; color: #999; line-height: 1.5; flex: 1; margin: 0 0 1rem 0; }
-        .cardFooter { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #666; padding-top: 1rem; border-top: 1px solid #2a2a2a; }
-
-        /* Modal Styles */
-        .modalOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 999; display: flex; justify-content: center; align-items: center; padding: 1rem; }
-        .modalContent { background: #1a1a1a; width: 100%; max-width: 600px; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid #333; box-shadow: 0 20px 40px rgba(0,0,0,0.8); animation: fadeUp 0.3s ease-out; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .modalCloseBtn { position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.5); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem; display: flex; justify-content: center; align-items: center; z-index: 10; transition: background 0.2s; }
-        .modalCloseBtn:hover { background: rgba(255,255,255,0.2); }
-        .modalHeader { position: relative; }
-        .modalImg { width: 100%; height: 200px; object-fit: cover; opacity: 0.8; mask-image: linear-gradient(to top, transparent, black); -webkit-mask-image: linear-gradient(to top, transparent, black); }
-        .modalTitle { position: absolute; bottom: 1rem; left: 1.5rem; right: 1.5rem; margin: 0; font-size: 1.3rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1.4; }
-        .modalBody { padding: 1.5rem; }
-        .aiBadge { display: inline-block; background: linear-gradient(90deg, #1A2980 0%, #26D0CE 100%); color: #fff; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.8rem; font-weight: 600; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(38,208,206,0.3); }
-        .summaryBox { background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px; border-left: 4px solid #26D0CE; font-size: 1.05rem; line-height: 1.7; color: #e0e0e0; }
-        .summaryLine { margin-bottom: 0.8rem; }
-        .summaryLine:last-child { margin-bottom: 0; }
-        
-        /* Skeleton Animation */
-        .skeletonBox { display: flex; flex-direction: column; gap: 0.8rem; padding: 1.5rem; background: rgba(255,255,255,0.02); border-radius: 8px; }
-        .skeletonLine { height: 16px; background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 4px; }
-        .skeletonLine.short { width: 60%; }
-        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
-        .modalFooter { padding: 1rem 1.5rem 1.5rem; display: flex; justify-content: flex-end; }
-        .originalLinkBtn { background: #fff; color: #000; text-decoration: none; padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; transition: transform 0.2s, background 0.2s; }
-        .originalLinkBtn:hover { transform: translateY(-2px); background: #eee; }
-      `}} />
-    </main>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-full bg-surface-container-high/90 backdrop-blur-md border border-white/10 shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <p className="text-sm font-bold text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            {toastMessage}
+          </p>
+        </div>
+      )}
+    </>
   );
 }

@@ -81,14 +81,22 @@ export async function POST(req: NextRequest) {
       : `원본 링크에서 본문 추출이 봇 차단에 의해 방어되었습니다. URL의 메타데이터와 컨텍스트를 최대한 추론하여 3줄로 적당한 뉴스 요약을 작성해주세요. URL: ${url}`;
 
     const prompt = `
-      You are an expert news summarizer and translator.
+      You are an expert news analyst and summarizer.
       Read the following article text extracted from the web.
-      Provide exactly a 3-line bullet point summary in Korean. 
-      If the original text is in English or another language, translate the summary to natural Korean explicitly.
-      Format exactly like this (Do not use Markdown block syntax around it):
-      - [요약 1]
-      - [요약 2]
-      - [요약 3]
+      Provide a highly informative and structured analysis in Korean. 
+      Follow this structure exactly (Use simple text format, no Markdown bold/headers inside):
+      
+      [주요 헤드라인]
+      기사의 핵심을 찌르는 한 줄 요약
+      
+      [핵심 내용 분석]
+      기사의 전체적인 흐름과 중요한 팩트를 3-5문장으로 상세히 설명하세요. 단순 요약이 아닌 깊이 있는 정보 전달이 목적입니다.
+      
+      [이 뉴스의 가치와 영향]
+      이 정보가 독자에게 왜 중요한지, 어떤 변화나 영향을 미칠 수 있는지 분석하여 설명하세요.
+      
+      [한 줄 결론]
+      기억해야 할 가장 중요한 포인트 하나.
 
       Article Text:
       ${contentToSummarize}
