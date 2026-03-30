@@ -15,10 +15,6 @@ interface Article {
   matchedKeyword: string;
 }
 
-interface BookmarkRes extends Article {
-  sourceName?: string;
-}
-
 export default function OrbitNewsCurator() {
   const { user, loading: authLoading } = useAuth();
   
@@ -81,8 +77,10 @@ export default function OrbitNewsCurator() {
       const res = await fetch('/api/bookmarks', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setBookmarks(data.bookmarks.map((b: BookmarkRes) => b.url));
-        setBookmarkedArticles(data.bookmarks.map((b: BookmarkRes) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setBookmarks(data.bookmarks.map((b: any) => b.url));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setBookmarkedArticles(data.bookmarks.map((b: any) => ({
           ...b,
           source: { name: b.sourceName || 'Unknown' }
         })));

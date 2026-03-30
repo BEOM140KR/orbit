@@ -51,14 +51,8 @@ export async function GET(req: NextRequest) {
       if (!res.ok) return [];
       
       const data = await res.json();
-      return (data.articles || []).map((art: { 
-        title: string; 
-        description: string; 
-        url: string; 
-        urlToImage: string; 
-        publishedAt: string;
-        source: { name: string };
-      }) => ({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (data.articles || []).map((art: any) => ({
         ...art,
         matchedKeyword: kw, 
       }));
