@@ -201,7 +201,10 @@ export default function OrbitNewsCurator() {
   if (!user) {
     return (
       <main className="flex flex-col items-center justify-center min-h-screen">
-        <div className="glass-card p-12 rounded-3xl text-center max-w-lg shadow-2xl">
+        <div className="glass-card p-12 rounded-[2.5rem] text-center max-w-lg shadow-[0_40px_100px_rgba(139,92,246,0.2)] animate-in fade-in zoom-in duration-500">
+          <div className="flex justify-center mb-6">
+            <img src="/logo.png" alt="Orbit Logo" className="w-16 h-16 object-contain drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" />
+          </div>
           <h1 className="text-4xl lg:text-5xl font-bold font-headline mb-4">
              <span className="orbit-gradient-text">Orbit</span>
           </h1>
@@ -221,7 +224,10 @@ export default function OrbitNewsCurator() {
       {/* Top Navbar */}
       <header className="fixed top-0 w-full z-40 bg-neutral-950/40 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 h-16 shadow-[0_20px_40px_rgba(139,92,246,0.08)]">
         <div className="flex items-center gap-8">
-          <h1 className="text-2xl font-bold font-headline tracking-tight orbit-gradient-text cursor-pointer" onClick={() => setView('feed')}>Orbit</h1>
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('feed')}>
+            <img src="/logo.png" alt="Orbit Logo" className="w-8 h-8 object-contain" />
+            <h1 className="text-2xl font-bold font-headline tracking-tight orbit-gradient-text">Orbit</h1>
+          </div>
           <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full bg-white/5 border border-white/10">
             <button 
               onClick={() => setView('feed')}
