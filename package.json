@@ -16,16 +16,16 @@
     "firebase-admin": "^13.7.0",
     "lucide-react": "^1.7.0",
     "mongoose": "^9.3.3",
-    "next": "15.1.4",
-    "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.1",
+    "eslint-config-next": "latest",
     "typescript": "^5"
   }
 }
