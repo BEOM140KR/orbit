@@ -7,12 +7,14 @@ import { auth } from '@/lib/firebase/config';
 
 interface Article {
   title: string;
+  translatedTitle?: string;
   description: string;
   url: string;
   urlToImage: string;
   publishedAt: string;
   source: { name: string };
-  matchedKeyword: string;
+  matchedKeyword?: string;
+  isTrending?: boolean;
 }
 
 export default function OrbitNews() {
@@ -41,6 +43,19 @@ export default function OrbitNews() {
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // 번역된 제목 추출 로직
+  const getTranslatedTitle = (summaryText: string | null) => {
+    if (!summaryText) return selectedArticle?.translatedTitle || selectedArticle?.title || '로딩 중...';
+    
+    const titleMatch = summaryText.match(/\[번역 제목\]\s*(.*)/);
+    if (titleMatch) return titleMatch[1].trim();
+    
+    const headlineMatch = summaryText.match(/\[주요 헤드라인\]\s*(.*)/);
+    if (headlineMatch) return headlineMatch[1].trim();
+    
+    return selectedArticle?.translatedTitle || selectedArticle?.title || '제목 없음';
   };
 
   // Data fetching
@@ -295,7 +310,7 @@ export default function OrbitNews() {
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-neutral-950 text-on-surface font-sans selection:bg-primary/30 selection:text-primary-fixed">
       {/* Top Navbar */}
       <header className="fixed top-0 w-full z-40 bg-neutral-950/40 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-4 sm:px-6 h-16 shadow-[0_20px_40px_rgba(139,92,246,0.08)]">
         <div className="flex items-center gap-3 sm:gap-8">
@@ -422,7 +437,7 @@ export default function OrbitNews() {
                   <span className="text-4xl font-headline font-black orbit-gradient-text opacity-30 group-hover:opacity-100 transition-opacity notranslate">{idx + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-[10px] text-neutral-500 mb-1 font-mono notranslate">{article.source.name}</p>
-                    <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">{article.title}</h4>
+                    <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">{article.translatedTitle || article.title}</h4>
                   </div>
                 </div>
               ))}
@@ -458,7 +473,7 @@ export default function OrbitNews() {
                            <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-neutral-400 font-bold uppercase tracking-tight notranslate">{article.source.name}</span>
                         </div>
                       <h3 className={`font-headline font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors line-clamp-3 ${idx === 0 ? 'text-2xl' : 'text-lg'}`}>
-                         {article.title}
+                         {article.translatedTitle || article.title}
                       </h3>
                       <p className={`text-on-surface-variant line-clamp-2 leading-relaxed ${idx === 0 ? 'text-sm mb-4' : 'text-xs'}`}>
                          {article.description}
@@ -505,7 +520,7 @@ export default function OrbitNews() {
                        <span className="text-[10px] text-neutral-500">{article.source.name}</span>
                     </div>
                     <h3 className="font-headline font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors line-clamp-3 text-lg">
-                       {article.title}
+                       {article.translatedTitle || article.title}
                     </h3>
                     <div className="mt-2 flex justify-end notranslate">
                       <button 
@@ -538,7 +553,7 @@ export default function OrbitNews() {
 
       {/* Detail Modal Overlay */}
       {selectedArticle && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-surface-container-lowest/80 backdrop-blur-md transition-opacity" onClick={closeModal}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-surface-container-lowest/80 backdrop-blur-md transition-opacity notranslate" onClick={closeModal}>
           <div className="glass-card w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-[0_40px_100px_rgba(139,92,246,0.15)] animate-in fade-in zoom-in duration-300" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="p-6 sm:p-8 pb-0 flex justify-between items-start">
@@ -548,7 +563,7 @@ export default function OrbitNews() {
                   <span className="text-[10px] text-primary font-label uppercase tracking-widest font-bold">Orbit AI Analysis</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl md:text-3xl font-headline font-bold text-white leading-tight">
-                  {selectedArticle.title}
+                  {getTranslatedTitle(summary)}
                 </h2>
               </div>
               <button onClick={closeModal} className="p-2 rounded-full hover:bg-white/10 text-neutral-400 transition-colors group shrink-0 notranslate">
@@ -559,24 +574,59 @@ export default function OrbitNews() {
             {/* Modal Middle: AI Summary Content */}
             <div className="p-6 sm:p-8 space-y-6 sm:space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
               {isSummarizing ? (
-                <div className="space-y-4 animate-pulse pt-4">
-                  <div className="h-4 bg-white/10 rounded-full w-[95%]"></div>
-                  <div className="h-4 bg-white/10 rounded-full w-[90%]"></div>
-                  <div className="h-4 bg-white/10 rounded-full w-[98%]"></div>
-                  <div className="h-4 bg-white/10 rounded-full w-[85%]"></div>
-                  <div className="h-4 bg-white/10 rounded-full w-[60%]"></div>
+                <div className="flex flex-col items-center justify-center py-16">
+                  <div className="relative mb-6">
+                    <div className="w-16 h-16 border-t-2 border-primary rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 w-16 h-16 border-2 border-white/5 rounded-full"></div>
+                    <div className="absolute inset-4 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full blur-xl animate-pulse"></div>
+                  </div>
+                  <p className="text-on-surface-variant font-medium animate-pulse text-sm tracking-widest uppercase opacity-80">AI News Distillation...</p>
                 </div>
               ) : (
                 <div className="text-on-surface-variant text-base md:text-lg leading-relaxed space-y-6">
                   {summary ? (
-                    summary.split('\n').filter(s => s.trim() !== '').map((line, i) => {
-                      const isHeading = line.startsWith('[') && line.endsWith(']');
-                      return (
-                        <p key={i} className={`font-body font-normal ${isHeading ? 'text-primary font-bold mt-4' : 'text-on-surface'}`}>
-                          {line}
-                        </p>
-                      );
-                    })
+                    summary
+                      .split('[주요 헤드라인]')[1] // 번역 제목 뒷부분(주요 헤드라인부터 시작) 가져오기
+                      ? ('[주요 헤드라인]\n' + summary.split('[주요 헤드라인]')[1]).split('\n').filter(s => s.trim() !== '').map((line, i) => {
+                          const sectionMatch = line.match(/^[\s*-]*\[(.*?)\]/);
+                          if (sectionMatch) {
+                            const sectionName = sectionMatch[1];
+                            const content = line.replace(sectionMatch[0], '').replace(/^[:\s-]+/, '');
+                            return (
+                              <div key={i} className="mb-6">
+                                <span className="text-primary font-bold block mb-2 text-lg">[{sectionName}]</span>
+                                <p className="text-on-surface font-body font-normal leading-relaxed text-base md:text-lg pl-1 border-l-2 border-white/5">
+                                  {content}
+                                </p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <p key={i} className="text-on-surface font-body font-normal leading-relaxed text-base md:text-lg mb-2">
+                              {line}
+                            </p>
+                          );
+                        })
+                      : summary.split('\n').filter(s => s.trim() !== '').map((line, i) => {
+                          const sectionMatch = line.match(/^[\s*-]*\[(.*?)\]/);
+                          if (sectionMatch) {
+                            const sectionName = sectionMatch[1];
+                            const content = line.replace(sectionMatch[0], '').replace(/^[:\s-]+/, '');
+                            return (
+                              <div key={i} className="mb-6">
+                                <span className="text-primary font-bold block mb-2 text-lg">[{sectionName}]</span>
+                                <p className="text-on-surface font-body font-normal leading-relaxed text-base md:text-lg pl-1 border-l-2 border-white/5">
+                                  {content}
+                                </p>
+                              </div>
+                            );
+                          }
+                          return (
+                            <p key={i} className="text-on-surface font-body font-normal leading-relaxed text-base md:text-lg mb-2">
+                              {line}
+                            </p>
+                          );
+                        })
                   ) : (
                     <p className="text-error">요약 정보를 불러올 수 없는 기사입니다.</p>
                   )}
@@ -641,6 +691,6 @@ export default function OrbitNews() {
           </p>
         </div>
       )}
-    </>
+    </div>
   );
 }

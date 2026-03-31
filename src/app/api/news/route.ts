@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongoose';
 import User from '@/lib/models/User';
 import { adminAuth } from '@/lib/firebase/admin';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,7 +34,10 @@ export async function GET(req: NextRequest) {
     if (mode === 'trending' || keywords.length === 0) {
       const trendingRes = await fetch(
         `https://newsapi.org/v2/top-headlines?country=us&pageSize=10&apiKey=${NEWS_API_KEY}`,
-        { next: { revalidate: 3600 } }
+        { 
+          headers: { 'User-Agent': 'Orbit-News-Bot/1.0' },
+          next: { revalidate: 3600 } 
+        }
       );
       const trendingData = await trendingRes.json();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,7 +53,10 @@ export async function GET(req: NextRequest) {
     const newsPromises = keywords.map(async (kw) => {
       const res = await fetch(
         `https://newsapi.org/v2/everything?q=${encodeURIComponent(kw)}&sortBy=publishedAt&pageSize=10&apiKey=${NEWS_API_KEY}`,
-        { next: { revalidate: 1800 } }
+        { 
+          headers: { 'User-Agent': 'Orbit-News-Bot/1.0' },
+          next: { revalidate: 1800 } 
+        }
       );
       if (!res.ok) return [];
       const data = await res.json();
@@ -68,6 +76,24 @@ export async function GET(req: NextRequest) {
     uniqueArticles.sort((a: any, b: any) => 
       new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     );
+
+    // --- [Batch Title Translation] ---
+    if (uniqueArticles.length > 0) {
+      try {
+        const titleList = uniqueArticles.map((a: any) => a.title).join('\n');
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const prompt = `Translate the following news titles into natural, professional Korean. Maintain the original order and separated by newlines. Do not add any numbering or extra text.\n\n${titleList}`;
+        const result = await model.generateContent(prompt);
+        const translatedText = await result.response.text();
+        const translatedLines = translatedText.split('\n').filter(l => l.trim() !== '');
+        
+        uniqueArticles.forEach((art: any, idx: number) => {
+          art.translatedTitle = translatedLines[idx] || art.title;
+        });
+      } catch (e) {
+        console.error('Batch Translation Error:', e);
+      }
+    }
 
     return NextResponse.json({ articles: uniqueArticles });
   } catch (error) {

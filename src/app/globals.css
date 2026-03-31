@@ -47,3 +47,35 @@ a {
     color-scheme: dark;
   }
 }
+
+/* Hide ALL Google Translate UI elements (Nuclear Stealth Mode) */
+[class*="goog-"],
+[id*="goog-"],
+[class*="goog-te"], 
+[class*="skiptranslate"],
+iframe[id*="translate"],
+.goog-te-spinner-pos,
+.goog-te-spinner,
+svg.goog-te-spinner,
+.goog-te-spinner-path {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+/* Hard target for Google's SVG Spinners & Frames */
+[class*="goog-"] svg, 
+[id*="goog-"] svg,
+.goog-te-spinner-pos svg,
+iframe.goog-te-menu-frame,
+iframe.goog-te-banner-frame {
+  display: none !important;
+}
+
+body { top: 0px !important; position: static !important; }
+.goog-text-highlight { background-color: transparent !important; box-shadow: none !important; }

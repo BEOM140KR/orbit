@@ -3,11 +3,10 @@ import dbConnect from '@/lib/db/mongoose';
 import Summary from '@/lib/models/Summary';
 import { adminAuth } from '@/lib/firebase/admin';
 import * as cheerio from 'cheerio';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemini 초기화 여부 확인 로그
-console.log('[DEBUG] Initializing GoogleGenAI client...');
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Gemini 초기화
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 async function verifyToken(req: NextRequest) {
   const authHeader = req.headers.get('Authorization');
@@ -69,8 +68,12 @@ export async function POST(req: NextRequest) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
-      const response = await fetch(url, { 
-        headers: { 'User-Agent': 'Orbit-Bot/1.0 (Mozilla/5.0)' },
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=1.0,ko;q=0.9',
+        },
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -102,13 +105,21 @@ export async function POST(req: NextRequest) {
       : `원본 링크에서 본문 추출이 봇 차단에 의해 방어되었습니다. URL의 메타데이터와 컨텍스트를 최대한 추론하여 3줄로 적당한 뉴스 요약을 작성해주세요. URL: ${url}`;
 
     const prompt = `
-      You are an expert news analyst and summarizer.
-      Read the following article text extracted from the web.
-      Provide a highly informative and structured analysis in Korean. 
+      You are a world-class news analyst and intelligence summarizer. 
+      Read the following news content or context.
+      
+      [CRITICAL INSTRUCTION]
+      If the provided content seems to be a 'Bot Block' message or is too short (less than 100 characters), do NOT say you cannot summarize. 
+      Instead, use the 기사 제목(Title) and URL 정보를 바탕으로 당신이 알고 있는 실시간 지식과 맥락을 동원하여 가장 정확한 추론 요약을 생성하세요.
+      "번역할 수 없다"는 말 대신 "추론된 정보를 바탕으로 요약해 드립니다"라는 뉘앙스로 정보를 제공하세요.
+
       Follow this structure exactly (Use simple text format, no Markdown bold/headers inside):
       
+      [번역 제목]
+      기사 원문 제목을 충실하게 한국어로 번역한 제목 (모달 상단 메인 제목으로 사용됩니다.)
+      
       [주요 헤드라인]
-      기사의 핵심을 찌르는 한 줄 요약
+      기사의 핵심을 찌르는 AI 전용 한국어 요약 헤드라인 (본문 피드의 시작점입니다.)
       
       [핵심 내용 분석]
       기사의 전체적인 흐름과 중요한 팩트를 3-5문장으로 상세히 설명하세요. 단순 요약이 아닌 깊이 있는 정보 전달이 목적입니다.
@@ -119,20 +130,17 @@ export async function POST(req: NextRequest) {
       [한 줄 결론]
       기억해야 할 가장 중요한 포인트 하나.
 
-      Article Text:
+      Article Text/Context:
       ${contentToSummarize}
     `;
 
     console.log('[DEBUG] 4. Prompt Prepared, sending request to Gemini 1.5 Flash...');
     
-    // 3. Gemini 통신 (호출 빈도와 가성비에 특화된 Lite 모델 적용)
-    const result = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: prompt,
-    });
-    
-    // @google/genai SDK v0.1.1 은 result.text 로 결과에 접근함
-    const aiSummary = result.text;
+    // 3. Gemini 통신 (공식 SDK 규격 및 최신 2.5 Flash-Lite 적용)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const aiSummary = response.text();
     
     console.log(`[DEBUG] 5. Gemini Response received:`);
     console.log(`[DEBUG] --> ${aiSummary}`);
