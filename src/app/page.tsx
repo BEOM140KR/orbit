@@ -320,7 +320,7 @@ export default function OrbitNews() {
         </div>
       </header>
 
-      <main className="pt-24 pb-24 px-6 max-w-6xl mx-auto min-h-screen">
+      <main className="pt-24 pb-24 px-4 sm:px-6 max-w-6xl mx-auto min-h-screen w-full overflow-x-hidden">
         <section className="mb-12 flex flex-col justify-between gap-6">
           <div className="max-w-2xl">
             <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest mb-4">
@@ -343,17 +343,18 @@ export default function OrbitNews() {
                   onChange={(e) => setNewKeyword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
                   placeholder="관심 키워드 추가 (예: 클라우드, 주식)" 
-                  className="flex-1 bg-transparent px-4 text-sm outline-none text-on-surface placeholder:text-neutral-600"
+                  className="flex-1 bg-transparent px-4 py-2 outline-none text-white text-sm placeholder:text-neutral-600"
                 />
-                <button onClick={handleAddKeyword} className="bg-surface-bright hover:bg-white/10 px-4 text-sm font-semibold text-on-surface transition border-l border-outline-variant">추가</button>
+                <button onClick={handleAddKeyword} className="bg-surface-bright hover:bg-white/10 px-4 text-sm font-semibold text-on-surface transition border-l border-outline-variant notranslate">추가</button>
               </div>
-              
-              <div className="flex gap-2 pb-2 sm:pb-0 overflow-x-auto no-scrollbar items-center whitespace-nowrap">
+              {/* Keywords Bar */}
+              <div className="flex gap-2 pb-2 sm:pb-0 overflow-x-auto no-scrollbar items-center whitespace-nowrap notranslate">
                 <button 
                   onClick={() => {
                     setActiveKeyword(null);
                     fetchNews();
                   }} 
+                  title="Sync Feed"
                   className={`flex shrink-0 items-center justify-center w-10 h-10 rounded-full transition-all ${
                     activeKeyword === null 
                     ? 'bg-gradient-to-r from-primary to-secondary text-on-primary shadow-lg shadow-primary/30 rotate-180' 
@@ -393,15 +394,15 @@ export default function OrbitNews() {
                <div className="w-1 h-6 bg-primary rounded-full"></div>
                <h3 className="text-xl font-bold font-headline text-white tracking-tight uppercase tracking-widest text-[14px]">🔥 Orbit Trending 10</h3>
             </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2">
+            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
               {trendingArticles.map((article, idx) => (
                 <div 
                   key={idx} 
                   onClick={(e) => handleCardClick(e, article)}
                   className="flex-shrink-0 w-[280px] sm:w-[320px] glass-card p-4 rounded-2xl border border-white/5 hover:border-primary/30 transition-all cursor-pointer group flex gap-4 items-center active:scale-[0.98]">
-                  <span className="text-4xl font-headline font-black orbit-gradient-text opacity-30 group-hover:opacity-100 transition-opacity">{idx + 1}</span>
+                  <span className="text-4xl font-headline font-black orbit-gradient-text opacity-30 group-hover:opacity-100 transition-opacity notranslate">{idx + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-neutral-500 mb-1 font-mono">{article.source.name}</p>
+                    <p className="text-[10px] text-neutral-500 mb-1 font-mono notranslate">{article.source.name}</p>
                     <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">{article.title}</h4>
                   </div>
                 </div>
@@ -432,11 +433,11 @@ export default function OrbitNews() {
                           </span>
                       </div>
                     </div>
-                    <div className="p-5 md:p-6">
-                      <div className="flex items-center gap-4 mb-3">
-                         <span className="text-[10px] font-mono orbit-gradient-text uppercase tracking-widest">{article.matchedKeyword || 'NEWS'}</span>
-                         <span className="text-[10px] text-neutral-500">• {article.source.name}</span>
-                      </div>
+                      <div className="p-5 md:p-6">
+                        <div className="flex items-center gap-2 mb-3">
+                           <span className="text-[10px] font-mono orbit-gradient-text uppercase tracking-widest notranslate">{article.matchedKeyword || 'NEWS'}</span>
+                           <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-neutral-400 font-bold uppercase tracking-tight notranslate">{article.source.name}</span>
+                        </div>
                       <h3 className={`font-headline font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors line-clamp-3 ${idx === 0 ? 'text-2xl' : 'text-lg'}`}>
                          {article.title}
                       </h3>
