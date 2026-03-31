@@ -230,15 +230,15 @@ export default function OrbitNewsCurator() {
             <img src="/logo.png" alt="Orbit Logo" className="w-8 h-8 object-contain" />
             <h1 className="text-2xl font-bold font-headline tracking-tight orbit-gradient-text">Orbit</h1>
           </div>
-          <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-full bg-white/5 border border-white/10">
+          <nav className="flex items-center gap-1 p-0.5 sm:p-1 rounded-full bg-white/5 border border-white/10 shrink-0">
             <button 
               onClick={() => setView('feed')}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${view === 'feed' ? 'bg-primary text-white' : 'text-neutral-400 hover:text-white'}`}>
+              className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-all ${view === 'feed' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
               Feed
             </button>
             <button 
               onClick={() => setView('bookmarks')}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${view === 'bookmarks' ? 'bg-primary text-white' : 'text-neutral-400 hover:text-white'}`}>
+              className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-all ${view === 'bookmarks' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
               Saved
             </button>
           </nav>
