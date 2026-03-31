@@ -133,7 +133,7 @@ export default function OrbitNews() {
 
       if (!document.querySelector('script[src*="translate_a/element.js"]')) {
         const script = document.createElement('script');
-        script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+        script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
         script.async = true;
         document.body.appendChild(script);
       }
@@ -275,7 +275,7 @@ export default function OrbitNews() {
 
   if (!user) {
     return (
-      <main className="flex flex-col items-center justify-center min-h-screen">
+      <main className="flex flex-col items-center justify-center min-h-screen bg-neutral-950 px-4">
         <div className="glass-card p-12 rounded-[2.5rem] text-center max-w-lg shadow-[0_40px_100px_rgba(139,92,246,0.2)] animate-in fade-in zoom-in duration-500">
           <div className="flex justify-center mb-6">
             <img src="/logo.png" alt="Orbit Logo" className="w-16 h-16 object-contain drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" />

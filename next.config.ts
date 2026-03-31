@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /*
   async headers() {
     return [
       {
@@ -28,12 +29,13 @@ const nextConfig: NextConfig = {
           },
           {
              key: 'Content-Security-Policy',
-             value: "default-src 'self' https:; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://translate.google.com https://translate.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data:;"
+             value: "default-src 'self' https:; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.googleapis.com https://*.firebaseapp.com https://apis.google.com https://translate.google.com https://translate.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com; img-src 'self' https: data:; frame-src 'self' https://*.firebaseapp.com;"
           }
         ]
       }
     ];
   }
+  */
 };
 
 export default nextConfig;
