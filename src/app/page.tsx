@@ -95,14 +95,32 @@ export default function OrbitNews() {
     } catch (e) { console.error('Error fetching bookmarks:', e); }
   }, [user]);
 
+  // Prevent background scroll when modal is open
+  useEffect(() => {
+    if (selectedArticle) {
+       document.body.style.overflow = 'hidden';
+    } else {
+       document.body.style.overflow = 'auto';
+    }
+    return () => {
+       document.body.style.overflow = 'auto';
+    };
+  }, [selectedArticle]);
+
   useEffect(() => { 
     fetchKeywords(); 
     fetchBookmarks();
 
     // Google Translate Initialization
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !window.location.hash.includes('google-translate')) {
       const match = document.cookie.match(/googtrans=\/auto\/(\w+)/);
-      if (match) setCurrentLang(match[1]);
+      if (match) {
+        setCurrentLang(match[1]);
+      } else {
+        // Default to 'ko' if no cookie exists to force widget state consistency
+        document.cookie = 'googtrans=/auto/ko; path=/; SameSite=Lax';
+        setCurrentLang('ko');
+      }
 
       (window as any).googleTranslateElementInit = () => {
         new (window as any).google.translate.TranslateElement({
@@ -123,7 +141,7 @@ export default function OrbitNews() {
   }, [fetchKeywords, fetchBookmarks]);
 
   const switchLanguage = (lang: string) => {
-    document.cookie = `googtrans=/auto/${lang}; path=/`;
+    document.cookie = `googtrans=/auto/${lang}; path=/; SameSite=Lax`;
     setCurrentLang(lang);
     window.location.reload();
   };
@@ -279,42 +297,43 @@ export default function OrbitNews() {
   return (
     <>
       {/* Top Navbar */}
-      <header className="fixed top-0 w-full z-40 bg-neutral-950/40 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 h-16 shadow-[0_20px_40px_rgba(139,92,246,0.08)]">
-        <div className="flex items-center gap-8">
+      <header className="fixed top-0 w-full z-40 bg-neutral-950/40 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-4 sm:px-6 h-16 shadow-[0_20px_40px_rgba(139,92,246,0.08)]">
+        <div className="flex items-center gap-3 sm:gap-8">
           <div className="flex items-center gap-2 cursor-pointer notranslate" onClick={() => setView('feed')}>
-            <img src="/logo.png" alt="Orbit Logo" className="w-8 h-8 object-contain" />
-            <h1 className="text-2xl font-bold font-headline tracking-tight orbit-gradient-text">Orbit</h1>
+            <img src="/logo.png" alt="Orbit Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+            <h1 className="text-xl sm:text-2xl font-bold font-headline tracking-tight orbit-gradient-text hidden xs:block">Orbit</h1>
           </div>
-          <nav className="flex items-center gap-1 p-0.5 sm:p-1 rounded-full bg-white/5 border border-white/10 shrink-0 notranslate">
+          <nav className="flex items-center gap-0.5 p-0.5 rounded-full bg-white/5 border border-white/10 shrink-0 notranslate">
             <button 
               onClick={() => setView('feed')}
-              className={`px-4 sm:px-5 py-2 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all active:scale-95 select-none ${view === 'feed' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
+              className={`px-3 sm:px-5 py-1.5 rounded-full text-[10px] sm:text-sm font-bold transition-all active:scale-95 select-none ${view === 'feed' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
               Feed
             </button>
             <button 
               onClick={() => setView('bookmarks')}
-              className={`px-4 sm:px-5 py-2 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all active:scale-95 select-none ${view === 'bookmarks' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
+              className={`px-3 sm:px-5 py-1.5 rounded-full text-[10px] sm:text-sm font-bold transition-all active:scale-95 select-none ${view === 'bookmarks' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
               Saved
             </button>
           </nav>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5 p-1 rounded-full bg-white/5 border border-white/5 notranslate">
-            {['ko', 'en', 'ja'].map((l) => (
+
+        <div className="flex items-center gap-2 sm:gap-6">
+          <div className="flex gap-1 sm:gap-2 notranslate">
+            {['ko', 'en', 'ja'].map((lang) => (
               <button 
-                key={l}
-                onClick={() => switchLanguage(l)}
-                className={`orbit-lang-chip notranslate ${currentLang === l ? 'active' : ''}`}
+                key={lang} 
+                onClick={() => switchLanguage(lang)} 
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full text-[10px] font-bold border transition-all flex items-center justify-center uppercase select-none ${currentLang === lang ? 'bg-white text-black border-white' : 'bg-transparent text-white border-white/20 hover:border-white/50'}`}
               >
-                {l.toUpperCase()}
+                {lang.substring(0, 2)}
               </button>
             ))}
           </div>
           <div id="google_translate_element" className="google-translate-container"></div>
-          <div className="flex items-center gap-3 notranslate">
-            <span className="hidden md:inline-block text-on-surface-variant text-sm border border-outline-variant px-3 py-1 rounded-full">{user.email}</span>
-            <button onClick={() => signOut(auth)} className="text-neutral-400 hover:text-sky-300 transition-colors flex items-center justify-center p-2 rounded-full hover:bg-white/5 active:scale-75" aria-label="Log Out">
-              <span className="material-symbols-outlined" data-icon="logout">logout</span>
+          <div className="flex items-center gap-1 sm:gap-3 notranslate">
+            <span className="hidden lg:inline-block text-on-surface-variant text-sm border border-outline-variant px-3 py-1 rounded-full">{user.email}</span>
+            <button onClick={() => signOut(auth)} className="text-neutral-400 hover:text-sky-300 transition-colors flex items-center justify-center p-2 rounded-full hover:bg-white/5 active:scale-75 shrink-0" aria-label="Log Out">
+              <span className="material-symbols-outlined text-[20px] sm:text-[24px]" data-icon="logout">logout</span>
             </button>
           </div>
         </div>
