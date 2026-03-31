@@ -17,6 +17,11 @@ const UserSchema = new mongoose.Schema({
     default: [],
     description: 'List of keywords for personal news filtering',
   },
+  language: {
+    type: String,
+    default: 'ko',
+    description: 'Preferred language for dashboard translation (e.g., ko, en, ja)',
+  },
   createdAt: {
     type: Date,
     default: Date.now,

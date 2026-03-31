@@ -56,17 +56,22 @@ export async function POST(req: NextRequest) {
   await dbConnect();
 
   try {
-    const body = await req.json();
-    const { keywords } = body;
-
-    if (!Array.isArray(keywords)) {
-      return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
+    const { keywords } = await req.json();
+    
+    // 1. 개수 및 데이터 형식 완벽 검출 (NoSQL 인젝션 방어)
+    if (!Array.isArray(keywords) || keywords.length > 5) {
+      return NextResponse.json({ error: 'Invalid data format or max count (5)' }, { status: 400 });
     }
 
-    // uid를 대조하여 덮어쓰기 및 없으면 신규 생성 로직(upsert)
+    // 2. 개별 키워드 데이터 타입 및 길이 강제 제한 (Santization)
+    const sanitizedKeywords = keywords
+      .filter((k) => typeof k === 'string')
+      .map((k: string) => k.trim().substring(0, 20));
+
+    // 3. uid를 대조하여 덮어쓰기 및 없으면 신규 생성 로직(upsert)
     const updatedUser = await User.findOneAndUpdate(
       { uid: decodedToken.uid },
-      { $set: { keywords, email: decodedToken.email } },
+      { $set: { keywords: sanitizedKeywords, email: decodedToken.email } },
       { new: true, upsert: true }
     );
 

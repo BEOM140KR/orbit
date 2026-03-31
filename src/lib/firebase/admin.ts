@@ -17,3 +17,5 @@ if (!admin.apps.length) {
 
 export const adminAuth = admin.auth();
 export const adminApp = admin.app();
+
+export default admin;

@@ -15,12 +15,15 @@ interface Article {
   matchedKeyword: string;
 }
 
-export default function OrbitNewsCurator() {
+export default function OrbitNews() {
   const { user, loading: authLoading } = useAuth();
   
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [activeKeyword, setActiveKeyword] = useState<string | null>(null);
+  const [trendingArticles, setTrendingArticles] = useState<Article[]>([]);
   const [newKeyword, setNewKeyword] = useState('');
   const [dataLoading, setDataLoading] = useState(false);
+  const [currentLang, setCurrentLang] = useState('ko');
   const [articles, setArticles] = useState<Article[]>([]);
   const [newsLoading, setNewsLoading] = useState(false);
 
@@ -46,11 +49,15 @@ export default function OrbitNewsCurator() {
     setNewsLoading(true);
     try {
       const token = await user.getIdToken();
+      // Fetch Personalized News
       const res = await fetch('/api/news', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setArticles(data.articles || []);
-      }
+      const data = await res.json();
+      setArticles(data.articles || []);
+
+      // Fetch Trending News
+      const trendRes = await fetch('/api/news?mode=trending', { headers: { Authorization: `Bearer ${token}` } });
+      const trendData = await trendRes.json();
+      setTrendingArticles(trendData.articles || []);
     } catch (e) { console.error('Error fetching news:', e); } 
     finally { setNewsLoading(false); }
   }, [user]);
@@ -91,34 +98,82 @@ export default function OrbitNewsCurator() {
   useEffect(() => { 
     fetchKeywords(); 
     fetchBookmarks();
+
+    // Google Translate Initialization
+    if (typeof window !== 'undefined') {
+      const match = document.cookie.match(/googtrans=\/auto\/(\w+)/);
+      if (match) setCurrentLang(match[1]);
+
+      (window as any).googleTranslateElementInit = () => {
+        new (window as any).google.translate.TranslateElement({
+          pageLanguage: 'auto',
+          includedLanguages: 'ko,en,ja',
+          layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
+          autoDisplay: false,
+        }, 'google_translate_element');
+      };
+
+      if (!document.querySelector('script[src*="translate_a/element.js"]')) {
+        const script = document.createElement('script');
+        script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+        script.async = true;
+        document.body.appendChild(script);
+      }
+    }
   }, [fetchKeywords, fetchBookmarks]);
 
-  const saveKeywordsToDB = async (updatedKeywords: string[]) => {
-    if (!user) return;
+  const switchLanguage = (lang: string) => {
+    document.cookie = `googtrans=/auto/${lang}; path=/`;
+    setCurrentLang(lang);
+    window.location.reload();
+  };
+
+  const handleAddKeyword = async () => {
+    if (!newKeyword.trim() || !user) return;
+    if (keywords.length >= 5) {
+      showToast('최대 5개의 키워드만 등록 가능합니다.');
+      return;
+    }
+    const updatedKeywords = [...keywords, newKeyword.trim()];
+    
     try {
       const token = await user.getIdToken();
-      await fetch('/api/keywords', {
+      const res = await fetch('/api/keywords', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ keywords: updatedKeywords }),
       });
-      fetchNews(); 
-    } catch (e) { console.error('Error saving keywords:', e); }
+      if (res.ok) {
+        setKeywords(updatedKeywords);
+        setNewKeyword('');
+        fetchNews();
+      }
+    } catch (e) {
+      console.error('Error saving keywords:', e);
+      showToast('키워드 저장 중 오류가 발생했습니다.');
+    }
   };
 
-  const handleAddKeyword = () => {
-    const text = newKeyword.trim();
-    if (!text || keywords.includes(text)) return;
-    const newArray = [...keywords, text];
-    setKeywords(newArray);
-    setNewKeyword('');
-    saveKeywordsToDB(newArray);
-  };
-
-  const handleRemoveKeyword = (targetKw: string) => {
-    const newArray = keywords.filter((kw) => kw !== targetKw);
-    setKeywords(newArray);
-    saveKeywordsToDB(newArray);
+  const handleRemoveKeyword = async (targetKw: string) => {
+    if (!user) return;
+    const updatedKeywords = keywords.filter((kw) => kw !== targetKw);
+    
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ keywords: updatedKeywords }),
+      });
+      if (res.ok) {
+        setKeywords(updatedKeywords);
+        if (activeKeyword === targetKw) setActiveKeyword(null);
+        fetchNews();
+      }
+    } catch (e) {
+      console.error('Error removing keywords:', e);
+      showToast('키워드 삭제 중 오류가 발생했습니다.');
+    }
   };
 
   const handleToggleBookmark = async (article: Article) => {
@@ -207,7 +262,7 @@ export default function OrbitNewsCurator() {
           <div className="flex justify-center mb-6">
             <img src="/logo.png" alt="Orbit Logo" className="w-16 h-16 object-contain drop-shadow-[0_0_15px_rgba(139,92,246,0.5)]" />
           </div>
-          <h1 className="text-4xl lg:text-5xl font-bold font-headline mb-4">
+          <h1 className="text-4xl lg:text-5xl font-bold font-headline mb-4 notranslate">
              <span className="orbit-gradient-text">Orbit</span>
           </h1>
           <p className="text-on-surface-variant font-medium mb-8 leading-relaxed">
@@ -226,28 +281,42 @@ export default function OrbitNewsCurator() {
       {/* Top Navbar */}
       <header className="fixed top-0 w-full z-40 bg-neutral-950/40 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 h-16 shadow-[0_20px_40px_rgba(139,92,246,0.08)]">
         <div className="flex items-center gap-8">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('feed')}>
+          <div className="flex items-center gap-2 cursor-pointer notranslate" onClick={() => setView('feed')}>
             <img src="/logo.png" alt="Orbit Logo" className="w-8 h-8 object-contain" />
             <h1 className="text-2xl font-bold font-headline tracking-tight orbit-gradient-text">Orbit</h1>
           </div>
-          <nav className="flex items-center gap-1 p-0.5 sm:p-1 rounded-full bg-white/5 border border-white/10 shrink-0">
+          <nav className="flex items-center gap-1 p-0.5 sm:p-1 rounded-full bg-white/5 border border-white/10 shrink-0 notranslate">
             <button 
               onClick={() => setView('feed')}
-              className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-all ${view === 'feed' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
+              className={`px-4 sm:px-5 py-2 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all active:scale-95 select-none ${view === 'feed' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
               Feed
             </button>
             <button 
               onClick={() => setView('bookmarks')}
-              className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-all ${view === 'bookmarks' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
+              className={`px-4 sm:px-5 py-2 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all active:scale-95 select-none ${view === 'bookmarks' ? 'bg-primary text-neutral-900 shadow-[0_0_15px_rgba(208,188,255,0.4)]' : 'text-neutral-400 hover:text-white'}`}>
               Saved
             </button>
           </nav>
         </div>
         <div className="flex items-center gap-4">
-          <span className="hidden md:inline-block text-on-surface-variant text-sm border border-outline-variant px-3 py-1 rounded-full">{user.email}</span>
-          <button onClick={() => signOut(auth)} className="text-neutral-400 hover:text-sky-300 transition-colors flex items-center justify-center" aria-label="Log Out">
-            <span className="material-symbols-outlined" data-icon="logout">logout</span>
-          </button>
+          <div className="flex items-center gap-1.5 p-1 rounded-full bg-white/5 border border-white/5 notranslate">
+            {['ko', 'en', 'ja'].map((l) => (
+              <button 
+                key={l}
+                onClick={() => switchLanguage(l)}
+                className={`orbit-lang-chip notranslate ${currentLang === l ? 'active' : ''}`}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <div id="google_translate_element" className="google-translate-container"></div>
+          <div className="flex items-center gap-3 notranslate">
+            <span className="hidden md:inline-block text-on-surface-variant text-sm border border-outline-variant px-3 py-1 rounded-full">{user.email}</span>
+            <button onClick={() => signOut(auth)} className="text-neutral-400 hover:text-sky-300 transition-colors flex items-center justify-center p-2 rounded-full hover:bg-white/5 active:scale-75" aria-label="Log Out">
+              <span className="material-symbols-outlined" data-icon="logout">logout</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -280,21 +349,66 @@ export default function OrbitNewsCurator() {
               </div>
               
               <div className="flex gap-2 pb-2 sm:pb-0 overflow-x-auto no-scrollbar items-center whitespace-nowrap">
-                <button onClick={fetchNews} className="flex shrink-0 items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-primary to-secondary text-on-primary font-bold hover:scale-105 transition">
+                <button 
+                  onClick={() => {
+                    setActiveKeyword(null);
+                    fetchNews();
+                  }} 
+                  className={`flex shrink-0 items-center justify-center w-10 h-10 rounded-full transition-all ${
+                    activeKeyword === null 
+                    ? 'bg-gradient-to-r from-primary to-secondary text-on-primary shadow-lg shadow-primary/30 rotate-180' 
+                    : 'bg-surface-container-high text-on-surface-variant hover:bg-white/10'
+                  }`}>
                   <span className="material-symbols-outlined text-[20px]">refresh</span>
                 </button>
-                {dataLoading && <span className="text-sm text-neutral-500 px-2 align-middle max-h-5 object-contain">연동 정보 갱신 중...</span>}
-                {!dataLoading && keywords.length === 0 && <span className="text-sm text-neutral-500 px-2">기본 피드가 적용중입니다.</span>}
                 {!dataLoading && keywords.map(kw => (
-                   <button key={kw} onClick={() => handleRemoveKeyword(kw)} className="group relative px-4 py-2 rounded-full bg-surface-container-high text-on-surface-variant text-sm hover:text-error hover:bg-error-container/20 border border-outline-variant transition-colors flex items-center pr-8 h-10 overflow-hidden">
+                   <button 
+                     key={kw} 
+                     onClick={() => setActiveKeyword(activeKeyword === kw ? null : kw)} 
+                     className={`group relative px-6 py-2 rounded-full border transition-all flex items-center pr-10 h-10 overflow-hidden select-none active:scale-95 ${
+                       activeKeyword === kw 
+                       ? 'bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(208,188,255,0.3)]' 
+                       : 'bg-surface-container-high border-outline-variant text-on-surface-variant hover:border-white/20'
+                     }`}>
                      #{kw} 
-                     <span className="material-symbols-outlined text-[16px] absolute right-2 opacity-50 group-hover:opacity-100 transition-opacity">close</span>
+                     <span 
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         handleRemoveKeyword(kw);
+                       }}
+                       className="material-symbols-outlined text-[16px] absolute right-3 opacity-40 hover:opacity-100 transition-opacity hover:text-error">
+                       close
+                     </span>
                    </button>
                 ))}
               </div>
             </div>
           )}
         </section>
+
+        {/* Orbit Trending 10 Section (NEW) */}
+        {view === 'feed' && trendingArticles.length > 0 && !activeKeyword && (
+          <section className="mb-12 animate-in fade-in slide-in-from-right-10 duration-700">
+            <div className="flex items-center gap-3 mb-6">
+               <div className="w-1 h-6 bg-primary rounded-full"></div>
+               <h3 className="text-xl font-bold font-headline text-white tracking-tight uppercase tracking-widest text-[14px]">🔥 Orbit Trending 10</h3>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2">
+              {trendingArticles.map((article, idx) => (
+                <div 
+                  key={idx} 
+                  onClick={(e) => handleCardClick(e, article)}
+                  className="flex-shrink-0 w-[280px] sm:w-[320px] glass-card p-4 rounded-2xl border border-white/5 hover:border-primary/30 transition-all cursor-pointer group flex gap-4 items-center active:scale-[0.98]">
+                  <span className="text-4xl font-headline font-black orbit-gradient-text opacity-30 group-hover:opacity-100 transition-opacity">{idx + 1}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-neutral-500 mb-1 font-mono">{article.source.name}</p>
+                    <h4 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">{article.title}</h4>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {view === 'feed' ? (
           newsLoading ? (
@@ -304,12 +418,14 @@ export default function OrbitNewsCurator() {
               </div>
           ) : articles.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {articles.map((article, idx) => (
-                  <article key={idx} onClick={(e) => handleCardClick(e, article)} className={`group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 cursor-pointer ${idx === 0 ? 'md:col-span-2' : ''}`}>
+                {articles
+                  .filter(art => !activeKeyword || art.matchedKeyword === activeKeyword)
+                  .map((article, idx) => (
+                  <article key={idx} onClick={(e) => handleCardClick(e, article)} className={`group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 cursor-pointer select-none ring-1 ring-white/5 active:ring-primary/40 ${idx === 0 ? 'md:col-span-2' : ''}`}>
                     <div className={`relative ${idx === 0 ? 'h-64' : 'h-48'} overflow-hidden`}>
                       <img alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={article.urlToImage || 'https://images.unsplash.com/photo-1550592704-5e58992e5c8e'} />
                       <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-transparent to-transparent opacity-80"></div>
-                      <div className="absolute top-4 left-4">
+                      <div className="absolute top-4 left-4 notranslate">
                           <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg glass-card bg-neutral-900/40 backdrop-blur-md text-primary text-[10px] font-bold">
                               <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
                               AI SUMMARY
@@ -327,6 +443,24 @@ export default function OrbitNewsCurator() {
                       <p className={`text-on-surface-variant line-clamp-2 leading-relaxed ${idx === 0 ? 'text-sm mb-4' : 'text-xs'}`}>
                          {article.description}
                       </p>
+                      
+                      {/* 카드 직접 북마크 버튼 (Native App Style) */}
+                      <div className="mt-4 flex justify-end notranslate">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleBookmark(article);
+                          }}
+                          className={`p-3 rounded-full transition-all active:scale-75 ${
+                            bookmarks.includes(article.url) 
+                              ? 'bg-primary/20 text-primary' 
+                              : 'bg-white/5 text-neutral-500 hover:text-white'
+                          }`}
+                          aria-label="Toggle Bookmark"
+                        >
+                          <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: bookmarks.includes(article.url) ? "'FILL' 1" : "'FILL' 0" }}>bookmark</span>
+                        </button>
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -353,6 +487,17 @@ export default function OrbitNewsCurator() {
                     <h3 className="font-headline font-bold text-white mb-2 leading-snug group-hover:text-primary transition-colors line-clamp-3 text-lg">
                        {article.title}
                     </h3>
+                    <div className="mt-2 flex justify-end notranslate">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleBookmark(article);
+                        }}
+                        className="p-3 rounded-full bg-primary/20 text-primary active:scale-75 transition-all"
+                      >
+                        <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>bookmark</span>
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -363,7 +508,7 @@ export default function OrbitNewsCurator() {
               <p className="text-on-surface-variant">저장된 북마크가 없습니다.</p>
               <button 
                 onClick={() => setView('feed')}
-                className="mt-6 px-6 py-2 rounded-full border border-primary/30 text-primary text-sm font-bold hover:bg-primary/10 transition-all">
+                className="mt-6 px-8 py-3 rounded-full border border-primary/30 text-primary text-sm font-bold hover:bg-primary/10 transition-all active:scale-95">
                 Find News to Save
               </button>
             </div>
@@ -378,7 +523,7 @@ export default function OrbitNewsCurator() {
             {/* Modal Header */}
             <div className="p-6 sm:p-8 pb-0 flex justify-between items-start">
               <div className="flex-1 pr-4 sm:pr-8">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3 notranslate">
                   <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
                   <span className="text-[10px] text-primary font-label uppercase tracking-widest font-bold">Orbit AI Analysis</span>
                 </div>
@@ -386,7 +531,7 @@ export default function OrbitNewsCurator() {
                   {selectedArticle.title}
                 </h2>
               </div>
-              <button onClick={closeModal} className="p-2 rounded-full hover:bg-white/10 text-neutral-400 transition-colors group shrink-0">
+              <button onClick={closeModal} className="p-2 rounded-full hover:bg-white/10 text-neutral-400 transition-colors group shrink-0 notranslate">
                 <span className="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform duration-300">close</span>
               </button>
             </div>
@@ -417,7 +562,7 @@ export default function OrbitNewsCurator() {
                   )}
 
                   {summary && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 notranslate">
                       <div className="p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/5 flex gap-4">
                         <span className="material-symbols-outlined text-secondary shrink-0">check_circle</span>
                         <div>
@@ -439,7 +584,7 @@ export default function OrbitNewsCurator() {
             </div>
 
             {/* Modal Bottom: Action Bar */}
-            <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-2 flex flex-col md:flex-row items-center gap-3 sm:gap-4 border-t border-white/5 mt-4">
+            <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-2 flex flex-col md:flex-row items-center gap-3 sm:gap-4 border-t border-white/5 mt-4 notranslate">
               <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer" className="w-full md:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-full bg-gradient-to-r from-primary to-secondary text-on-primary-fixed font-bold flex items-center justify-center gap-3 shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-95 transition-all group">
                 <span>원문 읽기</span>
                 <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
@@ -469,7 +614,7 @@ export default function OrbitNewsCurator() {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-full bg-surface-container-high/90 backdrop-blur-md border border-white/10 shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-full bg-surface-container-high/90 backdrop-blur-md border border-white/10 shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300 notranslate">
           <p className="text-sm font-bold text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
             {toastMessage}
