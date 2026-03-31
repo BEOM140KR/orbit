@@ -36,11 +36,25 @@ export async function POST(req: NextRequest) {
     console.log(`[DEBUG] 1. Request URL check: ${url}`);
     
     if (!url) {
-      console.log('[DEBUG] 🔴 URL parameter is missing.');
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    // 1. 이중 캐시 (MongoDB)
+    // SSRF Protection: Validate URL and blacklist internal IPs
+    try {
+      const parsedUrl = new URL(url);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+         return NextResponse.json({ error: 'Invalid URL protocol' }, { status: 400 });
+      }
+      const hostname = parsedUrl.hostname.toLowerCase();
+      const blacklistedHosts = ['localhost', '127.0.0.1', '0.0.0.0', '169.254.169.254'];
+      if (blacklistedHosts.includes(hostname) || hostname.startsWith('10.') || hostname.startsWith('192.168.') || hostname.startsWith('172.')) {
+         return NextResponse.json({ error: 'Access to internal network is forbidden' }, { status: 403 });
+      }
+    } catch (e) {
+      return NextResponse.json({ error: 'Malformed URL' }, { status: 400 });
+    }
+
+    // 1. Double Cache (MongoDB)
     const cachedEntry = await Summary.findOne({ url });
     if (cachedEntry && cachedEntry.content) {
       console.log('[DEBUG] 🟢 Found existing summary in MongoDB cache. Returning immediately.');
@@ -49,10 +63,17 @@ export async function POST(req: NextRequest) {
 
     console.log(`[DEBUG] 2. No cache found. Initiating Scraping for: ${url}`);
 
-    // 2. 외부 기사 스크래핑
+    // 2. Scraping with Timeout
     let extractedText = '';
     try {
-      const response = await fetch(url, { headers: { 'User-Agent': 'Orbit-Bot/1.0 (Mozilla/5.0)' } });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+      const response = await fetch(url, { 
+        headers: { 'User-Agent': 'Orbit-Bot/1.0 (Mozilla/5.0)' },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
       const html = await response.text();
       const $ = cheerio.load(html);
       
