@@ -357,14 +357,14 @@ export default function OrbitNews() {
       <main className="pt-24 pb-24 px-4 sm:px-6 max-w-6xl mx-auto min-h-screen w-full overflow-x-hidden">
         <section className="mb-12 flex flex-col justify-between gap-6">
           <div className="max-w-2xl">
-            <span className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest mb-4">
+            <span key={`badge-${view}`} className="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest mb-4">
               {view === 'feed' ? 'Daily Briefing' : 'Personal Archive'}
             </span>
-            <h2 className="text-4xl md:text-5xl font-headline font-bold tracking-tighter leading-[1.1] text-white">
+            <h2 key={`title-${view}`} className="text-4xl md:text-5xl font-headline font-bold tracking-tighter leading-[1.1] text-white">
                 {view === 'feed' ? (
-                  <>Live <span className="orbit-gradient-text">feed</span> pipeline</>
+                  <><span>Live</span> <span className="orbit-gradient-text">feed</span> <span>pipeline</span></>
                 ) : (
-                  <>Saved <span className="orbit-gradient-text">bookmarks</span></>
+                  <><span>Saved</span> <span className="orbit-gradient-text">bookmarks</span></>
                 )}
             </h2>
           </div>
@@ -431,7 +431,7 @@ export default function OrbitNews() {
             <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
               {trendingArticles.map((article, idx) => (
                 <div 
-                  key={idx} 
+                  key={article.url} 
                   onClick={(e) => handleCardClick(e, article)}
                   className="flex-shrink-0 w-[280px] sm:w-[320px] glass-card p-4 rounded-2xl border border-white/5 hover:border-primary/30 transition-all cursor-pointer group flex gap-4 items-center active:scale-[0.98]">
                   <span className="text-4xl font-headline font-black orbit-gradient-text opacity-30 group-hover:opacity-100 transition-opacity notranslate">{idx + 1}</span>
@@ -456,7 +456,7 @@ export default function OrbitNews() {
                 {articles
                   .filter(art => !activeKeyword || art.matchedKeyword === activeKeyword)
                   .map((article, idx) => (
-                  <article key={idx} onClick={(e) => handleCardClick(e, article)} className={`group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 cursor-pointer select-none ring-1 ring-white/5 active:ring-primary/40 ${idx === 0 ? 'md:col-span-2' : ''}`}>
+                  <article key={article.url} onClick={(e) => handleCardClick(e, article)} className={`group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 cursor-pointer select-none ring-1 ring-white/5 active:ring-primary/40 ${idx === 0 ? 'md:col-span-2' : ''}`}>
                     <div className={`relative ${idx === 0 ? 'h-64' : 'h-48'} overflow-hidden`}>
                       <img alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={article.urlToImage || 'https://images.unsplash.com/photo-1550592704-5e58992e5c8e'} />
                       <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-transparent to-transparent opacity-80"></div>
@@ -510,7 +510,7 @@ export default function OrbitNews() {
           bookmarkedArticles.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {bookmarkedArticles.map((article, idx) => (
-                <article key={idx} onClick={(e) => handleCardClick(e, article)} className="group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 cursor-pointer">
+                <article key={article.url} onClick={(e) => handleCardClick(e, article)} className="group glass-card rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 cursor-pointer">
                   <div className="relative h-48 overflow-hidden">
                     <img alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" src={article.urlToImage || 'https://images.unsplash.com/photo-1550592704-5e58992e5c8e'} />
                     <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/90 via-transparent to-transparent opacity-80"></div>
@@ -562,7 +562,7 @@ export default function OrbitNews() {
                   <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
                   <span className="text-[10px] text-primary font-label uppercase tracking-widest font-bold">Orbit AI Analysis</span>
                 </div>
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-headline font-bold text-white leading-tight">
+                <h2 key={summary ? 'loaded' : 'loading'} className="text-xl sm:text-2xl md:text-3xl font-headline font-bold text-white leading-tight">
                   {getTranslatedTitle(summary)}
                 </h2>
               </div>
@@ -668,7 +668,7 @@ export default function OrbitNews() {
                       : 'bg-white/5 text-neutral-400 hover:text-white hover:bg-white/10'
                   }`}>
                   <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: bookmarks.includes(selectedArticle.url) ? "'FILL' 1" : "'FILL' 0" }}>bookmark</span>
-                  <span className="md:hidden text-xs font-bold">{bookmarks.includes(selectedArticle.url) ? 'Saved' : 'Save'}</span>
+                  <span key={`fav-${bookmarks.includes(selectedArticle.url)}`} className="md:hidden text-xs font-bold">{bookmarks.includes(selectedArticle.url) ? 'Saved' : 'Save'}</span>
                 </button>
                 <button 
                   onClick={() => handleShare(selectedArticle)}
